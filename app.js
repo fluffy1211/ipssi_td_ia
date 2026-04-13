@@ -65,6 +65,8 @@ console.log('🔍 Vérification des connexions API...');
 
 // Verification de la connexion a nos providers
 async function callProvider(provider) {
+    const verbose = process.argv.includes('--verbose');
+
     const start = Date.now();
 
     const response = await fetch(provider.url, {
@@ -75,11 +77,12 @@ async function callProvider(provider) {
         },
         body: JSON.stringify({
             model: provider.model,
-            messages: [{ role: 'user', content: 'ping' }],
+            messages: [{ role: 'user', content: verbose ? 'Donne moi la capitale de la France en un mot' : 'ping' }],
             max_tokens: 5,
         }),
     });
 
+    const data = await response.json();
     const latency = Date.now() - start;
 
     if (!response.ok) {
@@ -95,15 +98,50 @@ async function callProvider(provider) {
         provider: provider.name,
         status: 'OK',
         latency,
+        content: data.choices[0].message.content,
     };
 }
 
 const results = await Promise.all(providers.map(callProvider));
 
+// Vérification de la connexion à Pinecone
+async function checkPinecone() {
+    const start = Date.now();
+
+    const response = await fetch('https://api.pinecone.io/indexes', {
+        method: 'GET',
+        headers: {
+            'Content-Type': 'application/json',
+            'Api-Key': process.env.PINECONE_API_KEY,
+            'X-Pinecone-API-Version': '2024-07',
+        },
+    });
+
+    const latency = Date.now() - start;
+
+    if (!response.ok) {
+        return {
+            provider: 'Pinecone',
+            status: 'ERROR',
+            latency,
+            error: `HTTP ${response.status}`,
+        };
+    }
+
+    return {
+        provider: 'Pinecone',
+        status: 'OK',
+        latency,
+    };
+}
+
+const pineconeResult = await checkPinecone();
+results.push(pineconeResult);
+
 // Affichage des résultats
 async function displayResults(result) {
     const statusEmoji = result.status === 'OK' ? '✅' : '❌';
-    console.log(`${statusEmoji} ${result.provider} ${result.latency}ms`);
+    console.log(`${statusEmoji} ${result.provider} ${result.latency}ms ${result.provider === 'Pinecone' ? '' : result.content}`);
     if (result.error) {
         console.log(`   Error: ${result.error}`);
     }
