@@ -156,3 +156,24 @@ if (successCount === results.length) {
 } else {
     console.log('Certaines connexions ont échoué. Vérifiez les erreurs ci-dessus et corrigez-les avant de continuer.');
 }
+
+// Liste des modèles disponibles chez Mistral
+async function listMistralModels() {
+    const response = await fetch('https://api.mistral.ai/v1/models', {
+        method: 'GET',
+        headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${process.env.MISTRAL_API_KEY}`,
+        },
+    });
+
+    if (!response.ok) {
+        console.error(`Erreur lors de la récupération des modèles Mistral: HTTP ${response.status}`);
+        return;
+    }
+
+    const data = await response.json();
+    console.log(`Modeles disponibles chez Mistral : ${data.data.map(m => m.id).join(', ')}`);
+}
+
+await listMistralModels();
