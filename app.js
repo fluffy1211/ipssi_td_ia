@@ -1,6 +1,7 @@
 import dotenv from 'dotenv';
 dotenv.config();
 
+// Vérification de la connexion à Mistral
 export async function checkMistral() {
     const start = Date.now();
 
@@ -38,6 +39,7 @@ export async function checkMistral() {
 const mistralResults = await checkMistral();
 console.log(mistralResults);
 
+// Definition de nos providers
 const providers = [
     {
         name: 'Mistral',
@@ -61,6 +63,7 @@ const providers = [
 
 console.log('🔍 Vérification des connexions API...');
 
+// Verification de la connexion a nos providers
 async function callProvider(provider) {
     const start = Date.now();
 
@@ -97,6 +100,7 @@ async function callProvider(provider) {
 
 const results = await Promise.all(providers.map(callProvider));
 
+// Affichage des résultats
 async function displayResults(result) {
     const statusEmoji = result.status === 'OK' ? '✅' : '❌';
     console.log(`${statusEmoji} ${result.provider} ${result.latency}ms`);
