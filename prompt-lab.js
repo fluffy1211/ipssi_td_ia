@@ -1,3 +1,4 @@
+import Table from 'cli-table3';
 import dotenv from 'dotenv';
 dotenv.config();
 
@@ -41,7 +42,7 @@ async function callProvider(provider, temperature) {
         body: JSON.stringify({
             model: provider.model,
             messages: [{ role: 'user', content: prompt }],
-            max_tokens: 100,
+            max_tokens: 150,
             temperature: temperature,
         }),
     });
@@ -74,21 +75,18 @@ const tasks = providers.flatMap(provider =>
 
 const results = await Promise.all(tasks);
 
-// Affichage des résultats
-async function displayResults(result) {
-    const statusEmoji = result.status === 'OK' ? '✅' : '❌';
-    console.log(`${statusEmoji} ${result.provider} ${result.latency}ms ${result.provider === 'Pinecone' ? '' : result.content}`);
-    if (result.error) {
-        console.log(`   Error: ${result.error}`);
-    }
-}
+// Affichage des résultats (Model puis temp puis reponse sous forme de table)
+const table = new Table({
+    head: ['Provider', 'Temperature', 'Response'],
+    colWidths: [15, 15, 150],
+});
 
-results.forEach(displayResults);
+results.forEach(result => {
+    table.push([
+        result.provider,
+        result.temperature,
+        result.status === 'OK' ? result.content : result.error,
+    ]);
+});
 
-const successCount = results.filter(r => r.status === 'OK').length;
-console.log(`${successCount}/${results.length} connexions actives`);
-if (successCount === results.length) {
-    console.log('Tout est vert. Vous êtes prêts pour la suite !');
-} else {
-    console.log('Certaines connexions ont échoué. Vérifiez les erreurs ci-dessus et corrigez-les avant de continuer.');
-}
+console.log(table.toString());
