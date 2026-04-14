@@ -33,6 +33,8 @@ const prompts = [{
 
 async function callProvider(provider, prompt) {
 
+    const start = Date.now();
+
     const response = await fetch(provider.url, {
         method: 'POST',
         headers: {
@@ -42,18 +44,21 @@ async function callProvider(provider, prompt) {
         body: JSON.stringify({
             model: provider.model,
             messages: [{ role: 'user', content: prompt }],
-            max_tokens: 150,
+            max_tokens: 200,
             temperature: 0.3,
         }),
     });
 
     const data = await response.json();
+    const latency = Date.now() - start;
 
     if (!response.ok) {
         return {
             provider: provider.name,
             status: 'ERROR',
             error: `HTTP ${response.status}`,
+            latency,
+            prompt
         };
     }
 
@@ -61,8 +66,34 @@ async function callProvider(provider, prompt) {
         provider: provider.name,
         status: 'OK',
         content: data.choices[0].message.content.trim(),
+        latency,
+        prompt
     };
 }
+
+async function compareSameModel(prompt) {
+    const tasks = providers.slice(1).map(provider => callProvider(provider, prompt));
+    const results = await Promise.all(tasks);
+
+    const table = new Table({
+        head: ['Provider', 'Latency (ms)', 'Response', 'Prompt'],
+        colWidths: [20, 15, 70, 70],
+    });
+
+    results.forEach(result => {
+        table.push([
+            result.provider,
+            result.latency,
+            result.content,
+            result.prompt
+        ]);
+    });
+
+    console.log(table.toString());
+}
+
+// Exemple d'utilisation
+compareSameModel(prompts[0].traduction);
 
 const tasks = prompts.flatMap(p => providers.map(provider => callProvider(provider, p.traduction)));
 
